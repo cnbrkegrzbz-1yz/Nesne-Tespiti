@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+opencv-python
+numpy
+torch
+torchvision
+pillow
+requests
+PyQt6
+python-dotenv
+
+# SAM 2 PyPI'de değildir, Meta'nın resmi deposundan kurulur:
+# pip install git+https://github.com/facebookresearch/sam2.git
