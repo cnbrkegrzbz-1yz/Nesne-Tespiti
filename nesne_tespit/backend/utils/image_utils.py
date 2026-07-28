@@ -7,7 +7,6 @@ Kırpma, boyutlandırma ve format dönüşüm fonksiyonları.
 import cv2
 import numpy as np
 
-
 def crop_with_mask(image, mask_dict, padding=5):
     """
     SAM 2 maskesi kullanarak nesneyi görselten kırpar.
@@ -34,11 +33,9 @@ def crop_with_mask(image, mask_dict, padding=5):
             interpolation=cv2.INTER_NEAREST
         ).astype(bool)
 
-    # Maskeyi 3 kanala genişlet ve uygula
     mask_3ch = np.stack([segmentation] * 3, axis=-1)
     masked_image = np.where(mask_3ch, image, 0).astype(np.uint8)
 
-    # Bounding box ile kırp
     bbox = mask_dict['bbox']  # [x, y, w, h]
     x, y, bw, bh = [int(v) for v in bbox]
 
@@ -53,7 +50,6 @@ def crop_with_mask(image, mask_dict, padding=5):
     if crop.size == 0:
         return None
     return crop
-
 
 def crop_with_bbox(image, bbox, padding=5):
     """
@@ -84,7 +80,6 @@ def crop_with_bbox(image, bbox, padding=5):
         return None
     return crop
 
-
 def safe_resize(image, target_size=(224, 224)):
     """
     Görseli güvenli şekilde boyutlandırır.
@@ -101,7 +96,6 @@ def safe_resize(image, target_size=(224, 224)):
         return None
 
     return cv2.resize(image, target_size, interpolation=cv2.INTER_AREA)
-
 
 def remove_background_simple(image):
     """
@@ -122,7 +116,6 @@ def remove_background_simple(image):
         from rembg import remove
         from PIL import Image
 
-        # BGR → RGB → PIL
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         pil_img = Image.fromarray(rgb)
 
@@ -152,7 +145,6 @@ def remove_background_simple(image):
 
     # Fallback: Kontur tabanlı merkez nesne bulma
     return _fallback_center_crop(image)
-
 
 def _fallback_center_crop(image):
     """

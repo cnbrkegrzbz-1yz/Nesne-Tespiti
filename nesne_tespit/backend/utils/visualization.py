@@ -7,7 +7,6 @@ Bulunan nesneleri görsel üzerinde işaretleyerek annotated görsel oluşturur.
 import cv2
 import numpy as np
 
-
 def draw_results(image, results, show_scores=True):
     """
     Bulunan nesneleri görsel üzerinde çizer.
@@ -47,7 +46,6 @@ def draw_results(image, results, show_scores=True):
         
         color = colors[idx % len(colors)]
         
-        # Bounding box çiz
         cv2.rectangle(annotated, (x, y), (x + w, y + h), color, 3)
         
         # Yarı-saydam maske overlay (opsiyonel, nesneyi vurgular)
@@ -60,24 +58,20 @@ def draw_results(image, results, show_scores=True):
                 ]
                 annotated = cv2.addWeighted(annotated, 0.7, overlay, 0.3, 0)
         
-        # Etiket oluştur
         label_num = f"{idx + 1}"
         if show_scores:
             label = f"{label_num} ({similarity:.2f})"
         else:
             label = label_num
         
-        # Etiket arka planı (okunabilirlik için)
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 0.6
         thickness = 2
         (text_w, text_h), baseline = cv2.getTextSize(label, font, font_scale, thickness)
         
-        # Etiket konumu (kutunun üstünde)
         label_y = max(text_h + 10, y - 8)
         label_x = x
         
-        # Siyah arka plan
         cv2.rectangle(
             annotated,
             (label_x, label_y - text_h - 6),
@@ -85,7 +79,6 @@ def draw_results(image, results, show_scores=True):
             (0, 0, 0), -1
         )
         
-        # Beyaz metin
         cv2.putText(
             annotated, label,
             (label_x + 3, label_y - 2),
@@ -103,9 +96,7 @@ def draw_results(image, results, show_scores=True):
     tx = img_w - tw - 20
     ty = img_h - 20
     
-    # Arka plan
     cv2.rectangle(annotated, (tx - 10, ty - th - 10), (tx + tw + 10, ty + 10), (0, 0, 0), -1)
-    # Metin
     cv2.putText(annotated, total_label, (tx, ty), font, font_scale, (0, 255, 0), thickness)
 
     return annotated

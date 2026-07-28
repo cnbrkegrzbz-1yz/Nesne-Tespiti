@@ -18,7 +18,6 @@ import torch
 import numpy as np
 import cv2
 
-
 class SAM2Model:
     """
     SAM 2 Automatic Mask Generator sarmalayıcısı.
@@ -45,7 +44,6 @@ class SAM2Model:
         # hassasiyetini etkiler, güvenlidir
         self._configure_gpu_optimizations()
 
-        # SAM 2 modelini oluştur
         from sam2.build_sam import build_sam2
         from sam2.automatic_mask_generator import SAM2AutomaticMaskGenerator
 
@@ -76,7 +74,6 @@ class SAM2Model:
             box_nms_thresh=0.7,
         )
 
-        # autocast durumu — inference sırasında with bloğu ile kullanılır
         self._use_bf16 = (
             torch.cuda.is_available()
             and torch.cuda.get_device_properties(0).major >= 8
@@ -148,7 +145,7 @@ class SAM2Model:
 
         all_masks = []
 
-        # ─── Adım 1: Orijinal çözünürlükte tarama ───
+        # Adım 1: Orijinal çözünürlükte tarama
         print(f"[SAM2] Orijinal çözünürlükte taranıyor ({w_orig}x{h_orig})...")
         masks_original = self._run_generator(rgb_image, use_fine=False)
         for mask in masks_original:
@@ -156,7 +153,7 @@ class SAM2Model:
         all_masks.extend(masks_original)
         print(f"[SAM2] Orijinal: {len(masks_original)} maske bulundu.")
 
-        # ─── Adım 2: 2x upscale ile hassas tarama (küçük nesneler için) ───
+        # Adım 2: 2x upscale ile hassas tarama (küçük nesneler için)
         if multi_scale:
             # Upscale boyut sınırı — çok büyük görsellerde VRAM taşmasını önle
             max_upscale_dim = 3200  # Piksel
@@ -174,9 +171,7 @@ class SAM2Model:
                 print(f"[SAM2] Upscale çözünürlükte taranıyor ({w_up}x{h_up}, {scale_factor:.1f}x)...")
                 masks_upscaled = self._run_generator(upscaled, use_fine=True)
 
-                # Koordinatları orijinal ölçeğe geri dönüştür
                 for mask in masks_upscaled:
-                    # Bbox'ı ölçekle
                     bx, by, bw, bh = mask['bbox']
                     mask['bbox'] = [
                         bx / scale_factor,
@@ -184,9 +179,7 @@ class SAM2Model:
                         bw / scale_factor,
                         bh / scale_factor
                     ]
-                    # Alanı ölçekle
                     mask['area'] = int(mask['area'] / (scale_factor ** 2))
-                    # Segmentation mask'i orijinal boyuta küçült
                     mask['segmentation'] = cv2.resize(
                         mask['segmentation'].astype(np.uint8),
                         (w_orig, h_orig),
@@ -197,7 +190,7 @@ class SAM2Model:
                 all_masks.extend(masks_upscaled)
                 print(f"[SAM2] Upscale: {len(masks_upscaled)} maske bulundu.")
 
-        # ─── Adım 3: Duplike maskeleri IoU ile kaldır ───
+        # Adım 3: Duplike maskeleri IoU ile kaldır
         deduped = self._deduplicate_masks(all_masks, iou_threshold=0.5)
         print(f"[SAM2] Deduplication sonrası: {len(deduped)} benzersiz maske.")
 
@@ -247,7 +240,6 @@ class SAM2Model:
                     suppressed.add(j)
                     continue
 
-                # IoU hesapla
                 intersection = np.sum(np.logical_and(seg_a, seg_b))
                 union = area_a + area_b - intersection
 

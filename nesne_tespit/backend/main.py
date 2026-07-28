@@ -32,9 +32,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pipeline.orchestrator import SayimPipeline
 
-# =====================================================================
-# KONFIGURASYON
-# =====================================================================
 # SAM 2 model dosyaları — sunucuda bu yolları kendi kurulumunuza göre güncelleyin
 SAM2_CHECKPOINT = os.environ.get(
     "SAM2_CHECKPOINT",
@@ -46,9 +43,6 @@ SAM2_CONFIG = os.environ.get(
 )
 DEVICE = os.environ.get("DEVICE", "cuda:0")
 
-# =====================================================================
-# UYGULAMA BAŞLATMA
-# =====================================================================
 app = FastAPI(
     title="Akıllı Sayım Sistemi",
     description="SAM 2 + DINOv2 tabanlı görsel referanslı nesne sayım API'si",
@@ -57,7 +51,6 @@ app = FastAPI(
 
 # Pipeline'ı global olarak başlat (modelleri bir kez yükle)
 pipeline = None
-
 
 @app.on_event("startup")
 async def startup_event():
@@ -76,10 +69,6 @@ async def startup_event():
         print(f"  Device: {DEVICE}")
         raise
 
-
-# =====================================================================
-# ANA ENDPOINT — Eski API ile %100 uyumlu
-# =====================================================================
 @app.post("/sayim_yap")
 async def sayim_yap(
     yigin_gorsel: UploadFile = File(...),
@@ -101,7 +90,6 @@ async def sayim_yap(
         )
 
     try:
-        # Görselleri oku ve decode et
         ref_bytes = await referans_gorsel.read()
         yigin_bytes = await yigin_gorsel.read()
 
@@ -119,14 +107,12 @@ async def sayim_yap(
                 content={"error": "Yığın görseli okunamadı."}
             )
 
-        # Pipeline'ı çalıştır
         adet, sonuc_img = pipeline.sayim_yap(
             referans=img_ref,
             yigin=img_yigin,
             metin=nesne_tanimi  # Sadece loglama için
         )
 
-        # Sonuç görselini base64'e encode et
         _, buffer = cv2.imencode('.png', sonuc_img)
         base64_gorsel = base64.b64encode(buffer).decode('utf-8')
 
@@ -144,10 +130,6 @@ async def sayim_yap(
             content={"error": f"Sayım hatası: {str(e)}"}
         )
 
-
-# =====================================================================
-# SAĞLIK KONTROLÜ
-# =====================================================================
 @app.get("/health")
 async def health_check():
     """Sunucu ve pipeline durumunu kontrol eder."""
@@ -157,10 +139,6 @@ async def health_check():
         "version": "2.0.0 — SMC Pipeline (SAM2 + DINOv2)",
     }
 
-
-# =====================================================================
-# SUNUCU BAŞLATMA
-# =====================================================================
 if __name__ == "__main__":
     uvicorn.run(
         app,

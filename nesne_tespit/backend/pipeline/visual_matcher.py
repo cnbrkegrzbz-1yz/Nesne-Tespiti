@@ -18,7 +18,6 @@ import numpy as np
 
 from utils.image_utils import crop_with_mask
 
-
 class VisualMatcher:
     """
     DINOv2 tabanlı görsel eşleştirici.
@@ -100,8 +99,6 @@ class VisualMatcher:
         results = []
         for i, sim in enumerate(similarities):
             if sim >= threshold:
-                # embed_valid_indices[i] → crops listesindeki indeks
-                # valid_mask_indices[crops_idx] → candidate_masks'taki indeks
                 crop_idx = embed_valid_indices[i]
                 mask_idx = valid_mask_indices[crop_idx]
 

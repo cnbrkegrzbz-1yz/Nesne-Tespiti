@@ -7,7 +7,6 @@ SAM 2 maskeleri için IoU hesaplama, NMS ve format dönüşüm fonksiyonları.
 import numpy as np
 import cv2
 
-
 def mask_to_bbox(mask_segmentation):
     """
     Boolean segmentation maskesinden bounding box çıkarır.
@@ -30,7 +29,6 @@ def mask_to_bbox(mask_segmentation):
 
     return (x_min, y_min, x_max - x_min, y_max - y_min)
 
-
 def compute_iou(mask_a, mask_b):
     """
     İki boolean maske arasındaki IoU (Intersection over Union) değerini hesaplar.
@@ -49,7 +47,6 @@ def compute_iou(mask_a, mask_b):
         return 0.0
     return float(intersection / union)
 
-
 def compute_iou_bbox(bbox_a, bbox_b):
     """
     İki bounding box arasındaki IoU değerini hesaplar.
@@ -64,7 +61,6 @@ def compute_iou_bbox(bbox_a, bbox_b):
     ax, ay, aw, ah = bbox_a
     bx, by, bw, bh = bbox_b
 
-    # Kesişim alanı
     x1 = max(ax, bx)
     y1 = max(ay, by)
     x2 = min(ax + aw, bx + bw)
@@ -81,7 +77,6 @@ def compute_iou_bbox(bbox_a, bbox_b):
     if union <= 0:
         return 0.0
     return float(intersection / union)
-
 
 def apply_nms(results, iou_threshold=0.3):
     """
@@ -125,7 +120,6 @@ def apply_nms(results, iou_threshold=0.3):
 
     return keep
 
-
 def compute_geometric_properties(mask_dict):
     """
     Bir SAM 2 maskesinden geometrik özellikleri çıkarır.
@@ -157,7 +151,6 @@ def compute_geometric_properties(mask_dict):
     if area < 1:
         return None
 
-    # Bounding box
     x, y, w, h = cv2.boundingRect(cnt)
 
     # Aspect ratio (her zaman >= 1 olacak şekilde)

@@ -21,7 +21,6 @@ from pipeline.geometric_filter import GeometricFilter
 from pipeline.visual_matcher import VisualMatcher
 from pipeline.post_processor import PostProcessor
 
-
 class SayimPipeline:
     """
     Tüm sayım pipeline'ını yöneten ana sınıf.
@@ -46,7 +45,7 @@ class SayimPipeline:
 
         load_start = time.time()
 
-        # ─── Model yükleme ───
+        # Model yükleme
         from models.sam2_loader import SAM2Model
         from models.dinov2_loader import DINOv2Model
 
@@ -57,7 +56,7 @@ class SayimPipeline:
             device=device
         )
 
-        # ─── Pipeline bileşenlerini oluştur ───
+        # Pipeline bileşenlerini oluştur
         self.ref_processor = ReferenceProcessor(self.dinov2)
         self.segmentor = Segmentor(self.sam2)
         self.geo_filter = GeometricFilter(
@@ -104,22 +103,22 @@ class SayimPipeline:
             print(f"YENİ SAYIM İSTEĞİ (metin prompt yok)")
             print(f"{'─' * 40}")
 
-        # ─── AŞAMA 1: Referans DNA Çıkarımı ───
+        # AŞAMA 1: Referans DNA Çıkarımı
         ref_profile = self.ref_processor.process(referans)
 
-        # ─── AŞAMA 2: Yığın Segmentasyonu ───
+        # AŞAMA 2: Yığın Segmentasyonu
         all_masks = self.segmentor.segment(yigin, multi_scale=True)
 
-        # ─── AŞAMA 3: Geometrik Ön-Filtreleme ───
+        # AŞAMA 3: Geometrik Ön-Filtreleme
         candidates = self.geo_filter.filter(all_masks, ref_profile['geometry'])
 
-        # ─── AŞAMA 4: DINOv2 Görsel Eşleştirme ───
+        # AŞAMA 4: DINOv2 Görsel Eşleştirme
         matches = self.matcher.match(yigin, candidates, ref_profile['embedding'])
 
-        # ─── AŞAMA 5: NMS + Çizim ───
+        # AŞAMA 5: NMS + Çizim
         final_results, annotated_image = self.post_processor.finalize(yigin, matches)
 
-        # ─── Sonuç Raporu ───
+        # Sonuç Raporu
         pipeline_time = time.time() - pipeline_start
         adet = len(final_results)
 

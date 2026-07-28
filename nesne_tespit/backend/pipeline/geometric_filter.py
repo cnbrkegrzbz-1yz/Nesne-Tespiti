@@ -15,7 +15,6 @@ import numpy as np
 
 from utils.mask_utils import compute_geometric_properties
 
-
 class GeometricFilter:
     """
     Geometrik özelliklere göre aday maskeleri filtreler.
@@ -67,38 +66,36 @@ class GeometricFilter:
         stats = {'ar_rejected': 0, 'sol_rejected': 0, 'area_rejected': 0, 'no_props': 0}
 
         for mask in masks:
-            # Geometrik özellikleri hesapla
             props = compute_geometric_properties(mask)
 
             if props is None:
                 stats['no_props'] += 1
                 continue
 
-            # ─── Filtre 1: Minimum alan ───
+            # Filtre 1: Minimum alan
             if props['area'] < self.min_area:
                 stats['area_rejected'] += 1
                 continue
 
-            # ─── Filtre 2: Maksimum alan (referansın X katından büyük olamaz) ───
+            # Filtre 2: Maksimum alan (referansın X katından büyük olamaz)
             if ref_area > 0 and props['area'] > (ref_area * self.max_area_ratio):
                 stats['area_rejected'] += 1
                 continue
 
-            # ─── Filtre 3: Aspect ratio benzerliği ───
+            # Filtre 3: Aspect ratio benzerliği
             if ref_ar > 0:
                 ar_diff = abs(props['aspect_ratio'] - ref_ar) / ref_ar
                 if ar_diff > self.ar_tolerance:
                     stats['ar_rejected'] += 1
                     continue
 
-            # ─── Filtre 4: Solidity benzerliği ───
+            # Filtre 4: Solidity benzerliği
             if ref_sol > 0:
                 sol_diff = abs(props['solidity'] - ref_sol) / ref_sol
                 if sol_diff > self.sol_tolerance:
                     stats['sol_rejected'] += 1
                     continue
 
-            # Tüm filtrelerden geçti
             mask['_geometric_props'] = props
             filtered.append(mask)
 

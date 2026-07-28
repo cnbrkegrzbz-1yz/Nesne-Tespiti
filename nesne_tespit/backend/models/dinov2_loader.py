@@ -17,7 +17,6 @@ from PIL import Image
 import cv2
 import numpy as np
 
-
 class DINOv2Model:
     """
     DINOv2 ViT-B/14 modeli ile görsel embedding çıkarıcı.
@@ -85,7 +84,6 @@ class DINOv2Model:
         if h < 8 or w < 8:
             return None
 
-        # BGR → RGB → PIL
         rgb_image = cv2.cvtColor(cv2_image, cv2.COLOR_BGR2RGB)
         pil_image = Image.fromarray(rgb_image)
 
