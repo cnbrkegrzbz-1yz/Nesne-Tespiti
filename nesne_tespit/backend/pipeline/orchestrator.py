@@ -4,16 +4,23 @@ Pipeline Orkestratörü — Ana Yönetici
 5 aşamalı "Segment → Match → Count" pipeline'ını tek bir sınıfta birleştirir.
 
 Akış:
-  Referans → [Aşama 1: DNA Çıkar] ─────────────────────┐
+  N Referans → [Aşama 1: DNA Çıkar (her açı için)] ────┐
                                                          │
-  Yığın   → [Aşama 2: SAM 2 Segmente Et]               │
-          → [Aşama 3: Geometrik Filtre] ←── ref profil ─┤
-          → [Aşama 4: DINOv2 Eşleştir] ←── ref embed ──┘
+  Yığın (tek) → [Aşama 2: SAM 2 Segmente Et]           │
+          → [Aşama 3: Geometrik Filtre] ←── ref profiller ┤
+          → [Aşama 4: DINOv2 Eşleştir] ←── ref embed'ler ┘
           → [Aşama 5: NMS + Çiz]
           → Sonuç: (adet, annotated_görsel)
+
+Not: Referans tarafı çoklu-açı (N görsel) destekler, yığın tarafı bilinçli
+olarak tek görsel — aynı yığının farklı açılardan fotoğrafları basitçe
+toplanamaz (aynı nesne 2 fotoğrafta görünürse çift sayılır).
 """
 
+import threading
 import time
+
+import torch
 
 from pipeline.reference_processor import ReferenceProcessor
 from pipeline.segmentor import Segmentor
@@ -65,70 +72,93 @@ class SayimPipeline:
             min_area=30,
             max_area_ratio=20.0,
         )
+        # NOT: fallback_threshold önceden 0.55'ti — dört ayrı gerçek testte de
+        # (temiz/kirli referans, hizalı/dağınık yığın fark etmeksizin) gerçek
+        # eşleşmelerin skoru hep 0.34-0.55 bandında kaldı ve "belirgin boşluk
+        # yok" durumunda bu ulaşılamaz sabite düşülünce sürekli 0 sonuç
+        # çıktı. min_threshold (0.35) ile aynı yapıldı — algoritmanın zaten
+        # var olan güvenlik tabanından daha yüksek, veriyle kalibre
+        # edilmemiş bir bar icat etmesin diye.
         self.matcher = VisualMatcher(
             self.dinov2,
             min_threshold=0.35,
-            fallback_threshold=0.55,
+            fallback_threshold=0.35,
         )
         self.post_processor = PostProcessor(
             nms_iou_threshold=0.3,
             show_scores=True,
         )
 
+        # SAM2'nin otomatik maske üreticisi (SAM2ImagePredictor) stateful ve
+        # thread-safe DEĞİL — set_image()+predict() adımları paylaşılan tek
+        # bir nesne üzerinde çalışıyor. main.py'deki endpoint'ler `def`
+        # (async değil) olduğu için FastAPI birden fazla isteği GERÇEKTEN
+        # paralel thread'lerde çalıştırabiliyor; bu kilit olmadan iki eşzamanlı
+        # sayım isteği SAM2'nin iç durumunu birbirine karıştırıp rastgele
+        # hatalara (ör. "image must be set", şekil uyuşmazlığı) yol açar.
+        self._kilit = threading.Lock()
+
         load_time = time.time() - load_start
         print(f"\n[SİSTEM] Tüm modeller {load_time:.1f} saniyede yüklendi.")
         print("[SİSTEM] Pipeline hazır, sayım bekleniyor...")
         print("=" * 60)
 
-    def sayim_yap(self, referans, yigin, metin=""):
+    def sayim_yap(self, referanslar, yigin, metin=""):
         """
         Ana sayım fonksiyonu — 5 aşamalı pipeline'ı çalıştırır.
-        
+
         Args:
-            referans: BGR formatlı numpy array (referans fotoğrafı)
-            yigin: BGR formatlı numpy array (yığın fotoğrafı)
+            referanslar: BGR formatlı numpy array LİSTESİ (N adet referans
+                fotoğrafı, farklı açılardan "öğretim" için)
+            yigin: BGR formatlı numpy array (yığın fotoğrafı, tek görsel)
             metin: Kullanıcı metin prompt'u (opsiyonel, sadece loglama için)
-            
+
         Returns:
             tuple: (adet: int, annotated_görsel: numpy array)
         """
-        pipeline_start = time.time()
-        
-        if metin:
-            print(f"\n{'─' * 40}")
-            print(f"YENİ SAYIM İSTEĞİ: '{metin}'")
-            print(f"{'─' * 40}")
-        else:
-            print(f"\n{'─' * 40}")
-            print(f"YENİ SAYIM İSTEĞİ (metin prompt yok)")
-            print(f"{'─' * 40}")
+        # Aynı anda tek bir sayım çalışsın diye kilit — bkz. __init__'teki not.
+        # Kilit beklerken başka bir istek burada bekler, hata almaz.
+        with self._kilit:
+            pipeline_start = time.time()
 
-        # AŞAMA 1: Referans DNA Çıkarımı
-        ref_profile = self.ref_processor.process(referans)
+            if metin:
+                print(f"\n{'─' * 40}")
+                print(f"YENİ SAYIM İSTEĞİ: '{metin}'")
+                print(f"{'─' * 40}")
+            else:
+                print(f"\n{'─' * 40}")
+                print(f"YENİ SAYIM İSTEĞİ (metin prompt yok)")
+                print(f"{'─' * 40}")
 
-        # AŞAMA 2: Yığın Segmentasyonu
-        all_masks = self.segmentor.segment(yigin, multi_scale=True)
+            # AŞAMA 1: N Referans DNA Çıkarımı
+            ref_profiles = self.ref_processor.process_batch(referanslar)
+            ref_geometries = [p['geometry'] for p in ref_profiles]
+            ref_embeddings = torch.cat([p['embedding'] for p in ref_profiles], dim=0)  # (K, 768)
 
-        # AŞAMA 3: Geometrik Ön-Filtreleme
-        candidates = self.geo_filter.filter(all_masks, ref_profile['geometry'])
+            # AŞAMA 2: Yığın Segmentasyonu
+            all_masks = self.segmentor.segment(yigin, multi_scale=True)
 
-        # AŞAMA 4: DINOv2 Görsel Eşleştirme
-        matches = self.matcher.match(yigin, candidates, ref_profile['embedding'])
+            # AŞAMA 3: Geometrik Ön-Filtreleme
+            candidates = self.geo_filter.filter(all_masks, ref_geometries)
 
-        # AŞAMA 5: NMS + Çizim
-        final_results, annotated_image = self.post_processor.finalize(yigin, matches)
+            # AŞAMA 4: DINOv2 Görsel Eşleştirme
+            matches = self.matcher.match(yigin, candidates, ref_embeddings)
 
-        # Sonuç Raporu
-        pipeline_time = time.time() - pipeline_start
-        adet = len(final_results)
+            # AŞAMA 5: NMS + Çizim
+            final_results, annotated_image = self.post_processor.finalize(yigin, matches)
 
-        print(f"\n{'=' * 40}")
-        print(f"SONUÇ: {adet} adet nesne bulundu")
-        print(f"Pipeline süresi: {pipeline_time:.2f} saniye")
-        print(f"  Aşama detay: {len(all_masks)} maske → "
-              f"{len(candidates)} aday → "
-              f"{len(matches)} eşleşme → "
-              f"{adet} sonuç")
-        print(f"{'=' * 40}\n")
+            # Sonuç Raporu
+            pipeline_time = time.time() - pipeline_start
+            adet = len(final_results)
 
-        return adet, annotated_image
+            print(f"\n{'=' * 40}")
+            print(f"SONUÇ: {adet} adet nesne bulundu")
+            print(f"Pipeline süresi: {pipeline_time:.2f} saniye")
+            print(f"  Kullanılan referans profili: {len(ref_profiles)}")
+            print(f"  Aşama detay: {len(all_masks)} maske → "
+                  f"{len(candidates)} aday → "
+                  f"{len(matches)} eşleşme → "
+                  f"{adet} sonuç")
+            print(f"{'=' * 40}\n")
+
+            return adet, annotated_image

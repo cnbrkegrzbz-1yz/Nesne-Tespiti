@@ -11,12 +11,21 @@ def crop_with_mask(image, mask_dict, padding=5):
     """
     SAM 2 maskesi kullanarak nesneyi görselten kırpar.
     Maskenin dışındaki pikselleri siyah yapar (temiz kırpım).
-    
+
+    NOT: Eksene hizalı bbox yerine, maskenin minimum-alanlı DÖNMÜŞ
+    dikdörtgeni kullanılarak nesne önce dik hale getirilir (perspektif
+    düzeltme), sonra sıkıca kırpılır. Aksi halde çapraz duran ince-uzun bir
+    nesne (örn. bir çubuk), çoğu siyah dolgudan oluşan geniş/kare bir kutu
+    içinde kalır ve DINOv2'ye 224x224'e küçültülürken önemsiz/donuk bir
+    obje olarak gider — bu da benzerlik skorunu belirgin şekilde düşürür.
+    Nesne zaten eksene hizalıysa (0°/90°) bu işlem eski davranışla aynı
+    sonucu üretir, geriye dönük bir bozulma yaratmaz.
+
     Args:
         image: BGR formatlı numpy array
         mask_dict: SAM 2 maske dict'i ('segmentation', 'bbox' içermeli)
         padding: Kırpım etrafına eklenecek piksel boşluğu
-        
+
     Returns:
         numpy array: Kırpılmış BGR görsel veya None
     """
@@ -36,10 +45,42 @@ def crop_with_mask(image, mask_dict, padding=5):
     mask_3ch = np.stack([segmentation] * 3, axis=-1)
     masked_image = np.where(mask_3ch, image, 0).astype(np.uint8)
 
+    # Döndürmeye bağışık sıkı kırpım için konturu bul
+    seg_uint8 = segmentation.astype(np.uint8) * 255
+    contours, _ = cv2.findContours(seg_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if contours:
+        cnt = max(contours, key=cv2.contourArea)
+        rect = cv2.minAreaRect(cnt)
+        rect_w, rect_h = rect[1]
+        long_side = int(round(max(rect_w, rect_h)))
+        short_side = int(round(min(rect_w, rect_h)))
+
+        if long_side > 0 and short_side > 0:
+            box = cv2.boxPoints(rect).astype(np.float32)
+            dst_pts = np.array([
+                [0, short_side - 1],
+                [0, 0],
+                [long_side - 1, 0],
+                [long_side - 1, short_side - 1],
+            ], dtype=np.float32)
+
+            M = cv2.getPerspectiveTransform(box, dst_pts)
+            warped = cv2.warpPerspective(masked_image, M, (long_side, short_side))
+
+            if padding > 0:
+                warped = cv2.copyMakeBorder(
+                    warped, padding, padding, padding, padding,
+                    cv2.BORDER_CONSTANT, value=(0, 0, 0)
+                )
+
+            if warped.size > 0:
+                return warped
+
+    # Fallback: kontur bulunamazsa eski eksene hizalı bbox kırpımı
     bbox = mask_dict['bbox']  # [x, y, w, h]
     x, y, bw, bh = [int(v) for v in bbox]
 
-    # Padding ekle (görsel sınırlarını aşma)
     x1 = max(0, x - padding)
     y1 = max(0, y - padding)
     x2 = min(w, x + bw + padding)

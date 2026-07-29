@@ -153,9 +153,14 @@ def compute_geometric_properties(mask_dict):
 
     x, y, w, h = cv2.boundingRect(cnt)
 
-    # Aspect ratio (her zaman >= 1 olacak şekilde)
-    short_side = min(w, h) if min(w, h) > 0 else 1
-    long_side = max(w, h)
+    # Aspect ratio: eksene hizalı bbox DEĞİL, minimum-alanlı DÖNMÜŞ dikdörtgen
+    # kullanılır (cv2.minAreaRect) — nesne görüntüde çapraz dursa bile gerçek
+    # ince-uzunluğunu doğru ölçer. cv2.boundingRect kullanılsaydı, ~45°
+    # döndürülmüş ince-uzun bir nesne (örn. bir çubuk) yanlışlıkla "kare"
+    # (aspect_ratio≈1) ölçülür ve geometrik filtrede haksız yere elenirdi.
+    (_, _), (rect_w, rect_h), _ = cv2.minAreaRect(cnt)
+    short_side = min(rect_w, rect_h) if min(rect_w, rect_h) > 0 else 1
+    long_side = max(rect_w, rect_h)
     aspect_ratio = long_side / short_side
 
     # Solidity (doluluk oranı)

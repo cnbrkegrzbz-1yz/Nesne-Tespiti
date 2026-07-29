@@ -42,28 +42,65 @@ class GeometricFilter:
         self.min_area = min_area
         self.max_area_ratio = max_area_ratio
 
-    def filter(self, masks, ref_geometry):
+    def _gecer_mi(self, props, ref_geometry):
         """
-        Maskeleri referans geometrisine göre filtreler.
-        
-        Args:
-            masks: SAM 2 maske listesi (Aşama 2 çıktısı)
-            ref_geometry: Referans geometrik profil (Aşama 1 çıktısı)
-                - aspect_ratio, solidity, area
-                
+        Tek bir aday, tek bir referans profiline karşı TÜM kriterleri
+        (alan/aspect-ratio/solidity) birlikte geçiyor mu kontrol eder.
+
         Returns:
-            list[dict]: Filtrelenmiş maske listesi
+            bool: Bu referans profiline göre aday geçerli mi
         """
         ref_ar = ref_geometry.get('aspect_ratio', 1.0)
         ref_sol = ref_geometry.get('solidity', 0.85)
         ref_area = ref_geometry.get('area', 1000)
 
+        # Maksimum alan (referansın X katından büyük olamaz)
+        if ref_area > 0 and props['area'] > (ref_area * self.max_area_ratio):
+            return False
+
+        # Aspect ratio benzerliği
+        if ref_ar > 0:
+            ar_diff = abs(props['aspect_ratio'] - ref_ar) / ref_ar
+            if ar_diff > self.ar_tolerance:
+                return False
+
+        # Solidity benzerliği
+        if ref_sol > 0:
+            sol_diff = abs(props['solidity'] - ref_sol) / ref_sol
+            if sol_diff > self.sol_tolerance:
+                return False
+
+        return True
+
+    def filter(self, masks, ref_geometries):
+        """
+        Maskeleri referans geometri(ler)ine göre filtreler.
+
+        Çoklu referans mantığı: bir aday, N referans açısından EN AZ
+        BİRİYLE tüm kriterleri (alan+AR+solidity) birlikte geçerse tutulur
+        (referanslar arası OR, bir referansın kendi kriterleri arası AND).
+        Bu şekilde farklı açılardan (üstten/yandan) çekilmiş referanslar
+        çok farklı geometrik profillere sahip olsa bile hepsi ayrı ayrı
+        değerlendirilir — "her filtreyi ayrı referanstan geçmek" gibi
+        anlamsız kombinasyonlara izin verilmez.
+
+        Args:
+            masks: SAM 2 maske listesi (Aşama 2 çıktısı)
+            ref_geometries: Referans geometrik profil listesi (Aşama 1 çıktısı)
+                Her biri: aspect_ratio, solidity, area
+
+        Returns:
+            list[dict]: Filtrelenmiş maske listesi
+        """
         print(f"[AŞAMA 3] Geometrik filtreleme başlatılıyor...")
-        print(f"  → Referans profil: AR={ref_ar:.2f}, Sol={ref_sol:.2f}, Alan={ref_area}")
+        print(f"  → Referans profil sayısı: {len(ref_geometries)}")
+        for i, g in enumerate(ref_geometries):
+            print(f"    #{i + 1}: AR={g.get('aspect_ratio', 1.0):.2f}, "
+                  f"Sol={g.get('solidity', 0.85):.2f}, Alan={g.get('area', 0)}")
         print(f"  → Gelen maske sayısı: {len(masks)}")
 
         filtered = []
-        stats = {'ar_rejected': 0, 'sol_rejected': 0, 'area_rejected': 0, 'no_props': 0}
+        stats = {'ar_sol_area_rejected': 0, 'area_rejected': 0, 'no_props': 0}
 
         for mask in masks:
             props = compute_geometric_properties(mask)
@@ -72,37 +109,22 @@ class GeometricFilter:
                 stats['no_props'] += 1
                 continue
 
-            # Filtre 1: Minimum alan
+            # Global filtre: minimum alan (hangi referansla kıyaslanırsa
+            # kıyaslansın değişmez, tek seferde elenir)
             if props['area'] < self.min_area:
                 stats['area_rejected'] += 1
                 continue
 
-            # Filtre 2: Maksimum alan (referansın X katından büyük olamaz)
-            if ref_area > 0 and props['area'] > (ref_area * self.max_area_ratio):
-                stats['area_rejected'] += 1
-                continue
-
-            # Filtre 3: Aspect ratio benzerliği
-            if ref_ar > 0:
-                ar_diff = abs(props['aspect_ratio'] - ref_ar) / ref_ar
-                if ar_diff > self.ar_tolerance:
-                    stats['ar_rejected'] += 1
-                    continue
-
-            # Filtre 4: Solidity benzerliği
-            if ref_sol > 0:
-                sol_diff = abs(props['solidity'] - ref_sol) / ref_sol
-                if sol_diff > self.sol_tolerance:
-                    stats['sol_rejected'] += 1
-                    continue
-
-            mask['_geometric_props'] = props
-            filtered.append(mask)
+            # En az bir referans profiliyle tüm kriterleri birlikte geçiyor mu?
+            if any(self._gecer_mi(props, ref_geom) for ref_geom in ref_geometries):
+                mask['_geometric_props'] = props
+                filtered.append(mask)
+            else:
+                stats['ar_sol_area_rejected'] += 1
 
         print(f"  → Filtreleme sonucu: {len(filtered)} aday kaldı "
-              f"(AR elendi: {stats['ar_rejected']}, "
-              f"Sol elendi: {stats['sol_rejected']}, "
-              f"Alan elendi: {stats['area_rejected']}, "
-              f"Geçersiz: {stats['no_props']})")
+              f"(hiçbir referansla uyuşmadı: {stats['ar_sol_area_rejected']}, "
+              f"min. alan altı: {stats['area_rejected']}, "
+              f"geçersiz: {stats['no_props']})")
 
         return filtered

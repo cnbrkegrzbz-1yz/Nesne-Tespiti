@@ -72,6 +72,42 @@ class ReferenceProcessor:
             'crop': ref_crop,
         }
 
+    def process_batch(self, ref_images):
+        """
+        N referans görselini sırayla process() ile işler (çoklu açı desteği).
+
+        Görseller tek tek işlenir (batch DINOv2 çıkarımı değil) çünkü her
+        görsel kendi remove_background_simple() + geometri hesaplama
+        adımından geçmeli. N küçük olduğu için (öğretim amaçlı, genelde
+        ≤10-20 görsel) performans kaygısı yok.
+
+        Args:
+            ref_images: BGR formatlı numpy array listesi
+
+        Returns:
+            list[dict]: Her biri process() çıktısı (embedding/geometry/crop).
+                        Embedding'i çıkarılamayan referanslar atlanır.
+
+        Raises:
+            ValueError: Hiçbir referanstan geçerli profil çıkarılamazsa.
+        """
+        print(f"[AŞAMA 1] {len(ref_images)} referans görseli işlenecek...")
+
+        profiles = []
+        for i, ref_image in enumerate(ref_images):
+            print(f"  → Referans {i + 1}/{len(ref_images)} işleniyor...")
+            profile = self.process(ref_image)
+            if profile['embedding'] is None:
+                print(f"  → [UYARI] Referans {i + 1} için embedding çıkarılamadı, atlanıyor.")
+                continue
+            profiles.append(profile)
+
+        if not profiles:
+            raise ValueError("Hiçbir referans görselinden geçerli bir profil çıkarılamadı.")
+
+        print(f"[AŞAMA 1] {len(profiles)}/{len(ref_images)} referans profili başarıyla çıkarıldı.")
+        return profiles
+
     def _extract_geometry(self, crop, mask):
         """
         Kırpılmış referans görselinden geometrik özellikler çıkarır.

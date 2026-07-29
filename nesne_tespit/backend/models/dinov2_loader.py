@@ -34,9 +34,15 @@ class DINOv2Model:
         print(f"[MODÜL] DINOv2 (ViT-B/14) başlatılıyor... Hedef: {device}")
         self.device = torch.device(device)
 
-        # Facebook'un resmi repo'sundan modeli yükle
+        # Facebook'un resmi repo'sundan modeli yükle.
+        # NOT: branch'i (':main') açıkça belirtmezsek, torch.hub HER
+        # başlangıçta -model cache'lenmiş olsa bile- GitHub'a bağlanıp
+        # varsayılan branch'i tespit etmeye çalışır (bkz. torch/hub.py
+        # _parse_repo_info). GitHub'a erişim o an kesilirse/yavaşsa
+        # (RemoteDisconnected vb.) sunucu hiç açılamaz. Branch'i açıkça
+        # vererek bu gereksiz ağ isteğini (cache varken) atlıyoruz.
         self.model = torch.hub.load(
-            'facebookresearch/dinov2', 
+            'facebookresearch/dinov2:main',
             'dinov2_vitb14',
             trust_repo='check'
         )
