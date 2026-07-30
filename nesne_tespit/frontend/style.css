@@ -1,44 +1,50 @@
 /* ============================================================
    AKILLI SAYIM İSTASYONU
-   Görsel yön: "kalibrasyon tezgahı"
-   Açık gri beton/milimetrik kağıt yüzey üzerinde girdi
-   istasyonları; sonucun okunduğu yer ise tezgaha gömülü
-   koyu bir cihaz ekranı. Şase rayları, andon lambası,
-   emniyet turuncusu ve mekanik sayaç.
+   Görsel yön: "kalibrasyon tezgahı" — tamamı koyu
+   Karartılmış atölyede grafit tezgah yüzeyi; üzerinde ondan
+   bir tık açık girdi istasyonları, tezgaha gömülü koyu bir
+   cihaz ekranı. Şase rayları, andon lambası, emniyet
+   turuncusu ve mekanik sayaç.
+
+   İki koyu aile birbirinden HUE ile ayrışır:
+     tezgah/istasyon ailesi -> grafit, hafif yeşil alt ton (~150°)
+     şase/ekran ailesi      -> mavi-arduvaz alt ton (~208°)
+   Böylece "tezgah vs. gömülü ekran" katmanlanması koyuda da durur.
    ============================================================ */
 
 :root {
-  /* Yüzeyler */
-  --tezgah: #E4E7E1;
-  --sheet: #FAFAF9;
-  --sheet-alt: #F0F2ED;
-  --sase: #1B2025;
-  --ekran: #10161B;
-  --ekran-2: #171F26;
+  /* Yüzeyler — hepsi koyu */
+  --tezgah: #0F1211;      /* tezgah/sayfa zemini — en koyu katman */
+  --sheet: #1A1F1D;       /* istasyon kartı — tezgahın üstünde, ışık alan yüzey */
+  --sheet-alt: #141817;   /* kart içi gömülü kuyular (yükleme alanı, plaka, şerit) */
+  --sase: #1B2025;        /* şase rayları — mavi-arduvaz */
+  --ekran: #10161B;       /* cihaz ekranı */
+  --ekran-2: #171F26;     /* ekran içi kutular */
 
-  /* Mürekkep */
-  --ink: #15181B;
-  --steel: #59636D;
+  /* Mürekkep — koyu üstünde açık */
+  --ink: #E7ECEA;
+  --steel: #99A4A0;
   --steel-acik: #8A939B;
   --sase-ink: #E8EBE7;
 
-  /* Çizgiler */
-  --rule: #CFD4CB;
-  --rule-koyu: #B9C0B6;
+  /* Çizgiler — koyu yüzeyde okunan ayraçlar */
+  --rule: #2B322F;
+  --rule-koyu: #3A423E;
   --rule-ekran: #2A343D;
 
   /* Emniyet turuncusu — tek marka aksanı */
   --safety: #E2560B;
-  --safety-hi: #FF7A2F;
-  --safety-ink: #B8460A;
+  --safety-hi: #FF7A2F;   /* koyu üstünde okunan turuncu (metin/aksan) */
+  --safety-ink: #B8460A;  /* yalnızca turuncu butonun altındaki gölge */
 
-  /* Sinyal renkleri (andon + doğrulama) — anlam taşır, süs değil */
+  /* Sinyal renkleri (andon + doğrulama) — anlam taşır, süs değil.
+     *-ink değerleri koyu zemin üstünde okunan açık karşılıklarıdır. */
   --sinyal-yesil: #34A853;
-  --sinyal-yesil-ink: #1B6B33;
+  --sinyal-yesil-ink: #8FD5A3;
   --sinyal-sari: #D99806;
-  --sinyal-sari-ink: #8A6003;
+  --sinyal-sari-ink: #F0CE86;
   --sinyal-kirmizi: #CE2A22;
-  --sinyal-kirmizi-ink: #9B1C16;
+  --sinyal-kirmizi-ink: #F0A29D;
 
   /* Tipografi */
   --f-display: "IBM Plex Sans Condensed", "IBM Plex Sans", Arial Narrow, sans-serif;
@@ -67,19 +73,23 @@ body {
   line-height: 1.55;
   color: var(--ink);
   background-color: var(--tezgah);
-  /* Tezgahın üzerine düşen tavan lambası + milimetrik kağıt altlığı — düz beton yerine ışıklanan bir yüzey */
+  /* Karartılmış atölye: tezgahın üzerine düşen soğuk cihaz aydınlatması +
+     milimetrik ızgara. Işık havuzu artık sıcak beyaz değil, soğuk bir
+     çelik-mavi parıltı; sağ alt köşe vinyet ile derinleşir. */
   background-image:
-    radial-gradient(120% 90% at 50% -10%, rgba(255, 255, 255, 0.7) 0%, transparent 55%),
-    radial-gradient(140% 100% at 100% 100%, rgba(21, 24, 27, 0.04) 0%, transparent 55%),
-    linear-gradient(to right, rgba(21, 24, 27, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(21, 24, 27, 0.04) 1px, transparent 1px);
+    radial-gradient(120% 90% at 50% -10%, rgba(150, 182, 196, 0.085) 0%, transparent 58%),
+    radial-gradient(140% 100% at 100% 100%, rgba(0, 0, 0, 0.55) 0%, transparent 60%),
+    linear-gradient(to right, rgba(226, 236, 232, 0.028) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 236, 232, 0.028) 1px, transparent 1px);
   background-size: auto, auto, 16px 16px, 16px 16px;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Beton dokusu — ızgarayı vektörel değil dökülmüş beton hissettirir */
+/* Grafit dokusu — ızgarayı vektörel değil dökülmüş bir yüzey hissettirir.
+   Koyu zeminde "multiply" görünmez olurdu; "overlay" hem açık hem koyu
+   yönde kırıp dokuyu ayakta tutuyor. */
 body::after {
   content: "";
   position: fixed;
@@ -87,8 +97,8 @@ body::after {
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
-  mix-blend-mode: multiply;
-  opacity: 0.04;
+  mix-blend-mode: overlay;
+  opacity: 0.055;
 }
 
 b, strong { font-weight: 600; }
@@ -302,13 +312,15 @@ b, strong { font-weight: 600; }
   min-width: 0;
 }
 
-/* ---- Girdi istasyonu: tezgaha konmuş bir iş emri kağıdı ---- */
+/* ---- Girdi istasyonu: tezgaha konmuş bir iş emri plakası ----
+   Üstteki ince açık çizgi = üstten gelen cihaz ışığının kartın kenarına
+   vurması; altındaki yumuşak siyah gölge kartı tezgahtan kaldırıyor. */
 .istasyon {
   background: var(--sheet);
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
   padding: 20px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 2px 6px rgba(21, 24, 27, 0.06);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 2px 12px rgba(0, 0, 0, 0.42);
   min-width: 0;
 }
 
@@ -350,7 +362,7 @@ b, strong { font-weight: 600; }
   font-family: var(--f-mono);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--safety-ink);
+  color: var(--safety-hi);
   letter-spacing: 0.02em;
 }
 
@@ -409,22 +421,22 @@ b, strong { font-weight: 600; }
 }
 
 .yukleme-alani.dolu:hover .yukleme-ekle,
-.yukleme-alani.dolu.surukleniyor .yukleme-ekle { color: var(--safety-ink); }
+.yukleme-alani.dolu.surukleniyor .yukleme-ekle { color: var(--safety-hi); }
 
 .yukleme-alani:hover {
   border-color: var(--safety);
-  background: #F6F0EA;
+  background: #1E1815;
 }
 
 /* Sürükleme: kenarlık sertleşir, yüzey turuncuya döner */
 .yukleme-alani.surukleniyor {
   border-color: var(--safety);
   border-style: solid;
-  background: #FBEDE3;
-  box-shadow: 0 0 0 3px rgba(226, 86, 11, 0.16);
+  background: #2B1C11;
+  box-shadow: 0 0 0 3px rgba(226, 86, 11, 0.24);
 }
 
-.yukleme-alani.surukleniyor .yukleme-bos { color: var(--safety-ink); }
+.yukleme-alani.surukleniyor .yukleme-bos { color: var(--safety-hi); }
 .yukleme-alani.surukleniyor .yukleme-bos svg { transform: translateY(-3px); }
 
 .yukleme-alani:focus-within {
@@ -520,8 +532,8 @@ b, strong { font-weight: 600; }
   justify-content: center;
   border: none;
   border-radius: 2px;
-  background: rgba(21, 24, 27, 0.72);
-  color: #fff;
+  background: rgba(8, 10, 9, 0.8);
+  color: var(--ink);
   font-family: var(--f-mono);
   font-size: 0.78rem;
   line-height: 1;
@@ -568,18 +580,18 @@ b, strong { font-weight: 600; }
 }
 
 .vlm-durumu.yeterli {
-  border-color: #BEDFC6;
+  border-color: rgba(52, 168, 83, 0.42);
   border-left-color: var(--sinyal-yesil);
-  background: #F0F8F1;
+  background: rgba(52, 168, 83, 0.10);
   color: var(--sinyal-yesil-ink);
 }
 
 /* Uyarı = ikaz bandı. Fabrika dili; renk tek başına anlam taşımasın diye
    çizgili doku ile de işaretlenir. */
 .vlm-durumu.yetersiz {
-  border-color: #EBD8A6;
+  border-color: rgba(217, 152, 6, 0.42);
   border-left-color: var(--sinyal-sari);
-  background: #FCF6E6;
+  background: rgba(217, 152, 6, 0.10);
   color: var(--sinyal-sari-ink);
   padding-left: 20px;
 }
@@ -600,9 +612,9 @@ b, strong { font-weight: 600; }
 }
 
 .vlm-durumu.hata {
-  border-color: #EEC3C0;
+  border-color: rgba(206, 42, 34, 0.45);
   border-left-color: var(--sinyal-kirmizi);
-  background: #FCF0EF;
+  background: rgba(206, 42, 34, 0.12);
   color: var(--sinyal-kirmizi-ink);
 }
 
@@ -644,7 +656,7 @@ b, strong { font-weight: 600; }
 input[type="text"] {
   width: 100%;
   padding: 10px 12px;
-  background: #fff;
+  background: #121615;
   border: 1px solid var(--rule-koyu);
   border-radius: 2px;
   color: var(--ink);
@@ -667,9 +679,9 @@ input[type="text"]:focus-visible {
 .onay-bandi {
   padding: 13px 14px;
   margin-bottom: 14px;
-  border: 1px solid #EBD8A6;
+  border: 1px solid rgba(217, 152, 6, 0.42);
   border-radius: 2px;
-  background: #FCF6E6;
+  background: rgba(217, 152, 6, 0.10);
   animation: serit-gir 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -684,7 +696,7 @@ input[type="text"]:focus-visible {
 
 .ikincil-btn {
   padding: 9px 15px;
-  background: #fff;
+  background: #222725;
   border: 1px solid var(--rule-koyu);
   border-radius: 2px;
   color: var(--ink);
@@ -697,7 +709,7 @@ input[type="text"]:focus-visible {
   transition: background-color 160ms ease, border-color 160ms ease;
 }
 
-.ikincil-btn:hover { background: var(--sheet-alt); border-color: var(--steel-acik); }
+.ikincil-btn:hover { background: #2C322F; border-color: var(--steel-acik); }
 .ikincil-btn:focus-visible { outline: 2px solid var(--safety); outline-offset: 2px; }
 
 /* ============================================================
@@ -735,9 +747,9 @@ input[type="text"]:focus-visible {
 .cta-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 .cta-btn:disabled {
-  background: #C9CEC6;
-  color: #F4F5F2;
-  box-shadow: 0 2px 0 #B2B8AE;
+  background: #262B29;
+  color: #8B958F;
+  box-shadow: 0 2px 0 #161A18;
   cursor: not-allowed;
 }
 
@@ -758,7 +770,7 @@ input[type="text"]:focus-visible {
   border: 1px solid #2B333A;
   border-radius: var(--r-lg);
   overflow: hidden;
-  box-shadow: 0 3px 14px rgba(21, 24, 27, 0.16);
+  box-shadow: 0 3px 16px rgba(0, 0, 0, 0.5);
   min-width: 0;
 }
 
@@ -891,7 +903,7 @@ input[type="text"]:focus-visible {
   color: #A9B3BB;
 }
 
-.durum-mesaji span { font-size: 0.85rem; line-height: 1.55; color: #6E7A84; }
+.durum-mesaji span { font-size: 0.85rem; line-height: 1.55; color: #828D96; }
 
 /* ---- Tarama animasyonu: cihaz "bakıyor" ---- */
 .tarama-alani {
@@ -1026,7 +1038,7 @@ input[type="text"]:focus-visible {
   font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
-  color: #5F6A73;
+  color: #7C8790;
 }
 
 /* Mekanik sayaç: haneler yerine oturur */
@@ -1071,7 +1083,7 @@ input[type="text"]:focus-visible {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #6E7A84;
+  color: #828D96;
   padding-bottom: 0.45em;
 }
 
@@ -1105,7 +1117,7 @@ input[type="text"]:focus-visible {
   font-family: var(--f-mono);
   font-size: 0.68rem;
   letter-spacing: 0.03em;
-  color: #5F6A73;
+  color: #7C8790;
 }
 
 /* ---- Sonuç görseli ---- */
@@ -1129,7 +1141,7 @@ input[type="text"]:focus-visible {
   font-family: var(--f-mono);
   font-size: 0.68rem;
   letter-spacing: 0.04em;
-  color: #5F6A73;
+  color: #7C8790;
 }
 
 /* ============================================================
