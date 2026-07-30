@@ -3,103 +3,184 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Akıllı Sayım Sistemi</title>
+<title>Akıllı Sayım İstasyonu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="glow-blob" aria-hidden="true"></div>
+<!-- ============ ÜST ŞASE RAYI ============ -->
+<header class="sase-ray">
+  <div class="ray-ic">
+    <div class="marka">
+      <svg class="marka-isaret" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+        <path d="M3 9V3h6M29 9V3h-6M3 23v6h6M29 23v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/>
+        <circle cx="11" cy="12" r="2.4" fill="currentColor"/>
+        <circle cx="21" cy="12" r="2.4" fill="currentColor"/>
+        <circle cx="16" cy="20" r="2.4" fill="currentColor"/>
+      </svg>
+      <div class="marka-yazi">
+        <span class="marka-ad">Akıllı Sayım İstasyonu</span>
+        <span class="marka-alt">Referans öğretmeli parça sayımı · SAM 2 + DINOv2</span>
+      </div>
+    </div>
 
-<header class="site-header">
-  <div class="baslik-grup">
-    <span class="baslik-glow" aria-hidden="true"></span>
-    <h1>Akıllı Sayım Sistemi</h1>
-    <p class="alt-baslik">SAM 2 + DINOv2 · Çoklu-referans, görsel referanslı nesne sayımı</p>
-  </div>
-  <div class="durum-grup">
-    <button id="durum-yenile-btn" class="icon-btn" type="button" aria-label="Bağlantı durumunu yenile">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
-    </button>
-    <span class="durum-pill" id="durum-pill">
-      <span class="durum-nokta" id="durum-nokta"></span>
-      <span id="durum-metin">Kontrol ediliyor...</span>
-    </span>
+    <div class="durum-grup">
+      <!-- Andon lambası: yeşil / sarı / kırmızı -->
+      <span class="durum-pill" id="durum-pill">
+        <span class="andon" aria-hidden="true">
+          <span class="andon-katman andon-kirmizi"></span>
+          <span class="andon-katman andon-sari"></span>
+          <span class="andon-katman andon-yesil"></span>
+        </span>
+        <span class="durum-nokta" id="durum-nokta"></span>
+        <span class="durum-metin" id="durum-metin">Kontrol ediliyor</span>
+      </span>
+      <button id="durum-yenile-btn" class="ikon-btn" type="button" aria-label="Bağlantı durumunu yenile">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+      </button>
+    </div>
   </div>
 </header>
 
-<main class="ana-panel ana-panel-3">
-  <section class="panel-kart">
-    <h2 class="bolum-basligi">1 · Referans Fotoğrafları — Öğretim</h2>
+<!-- ============ TEZGAH ============ -->
+<main class="tezgah">
 
-    <label id="referans-yukleme-alani" for="referans-input" class="yukleme-alani yukleme-alani-kompakt">
-      <input type="file" id="referans-input" name="referans_gorseller" accept="image/*" multiple hidden>
-      <div id="referans-yukleme-bos" class="yukleme-bos">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <p>Parçayı farklı açılardan çekin, hepsini birden sürükleyin ya da seçin</p>
+  <!-- ---- Sol ray: girdi istasyonları ---- -->
+  <div class="istasyon-rayi">
+
+    <section class="istasyon">
+      <div class="istasyon-basligi">
+        <span class="istasyon-no">01</span>
+        <div>
+          <h2>Referans Öğretimi</h2>
+          <p class="istasyon-not">Parçayı 3–5 farklı açıdan çekin. Sistem neyi sayacağını buradan öğrenir.</p>
+        </div>
       </div>
-    </label>
 
-    <div id="referans-thumbnail-grid" class="thumbnail-grid" hidden></div>
+      <label id="referans-yukleme-alani" for="referans-input" class="yukleme-alani yukleme-alani-kompakt">
+        <input type="file" id="referans-input" name="referans_gorseller" accept="image/*" multiple hidden>
+        <div id="referans-yukleme-bos" class="yukleme-bos">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p><b>Referans fotoğraflarını bırakın</b><span>ya da seçmek için tıklayın · çoklu seçim</span></p>
+        </div>
+        <span class="yukleme-ekle" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Referans ekle
+        </span>
+      </label>
 
-    <div id="referans-vlm-durumu" class="vlm-durumu" hidden></div>
+      <div id="referans-thumbnail-grid" class="thumbnail-grid" hidden></div>
 
-    <label for="nesne-tanimi-input" class="alan-etiketi">Nesne Tanımı (opsiyonel)</label>
-    <input type="text" id="nesne-tanimi-input" name="nesne_tanimi"
-      placeholder="Örn: siyah vida, gri plastik çubuk (opsiyonel)">
+      <div id="referans-vlm-durumu" class="vlm-durumu" hidden></div>
+
+      <label for="nesne-tanimi-input" class="alan-etiketi">Nesne tanımı <span class="etiket-opsiyonel">opsiyonel</span></label>
+      <input type="text" id="nesne-tanimi-input" name="nesne_tanimi"
+        placeholder="Örn: siyah vida, gri plastik çubuk">
+    </section>
+
+    <section class="istasyon">
+      <div class="istasyon-basligi">
+        <span class="istasyon-no">02</span>
+        <div>
+          <h2>Yığın Fotoğrafı</h2>
+          <p class="istasyon-not">Sayılacak parçaların tamamının göründüğü tek bir kare.</p>
+        </div>
+      </div>
+
+      <label id="yigin-yukleme-alani" for="yigin-input" class="yukleme-alani">
+        <input type="file" id="yigin-input" name="yigin_gorsel" accept="image/*" hidden>
+        <div id="yigin-yukleme-bos" class="yukleme-bos">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p><b>Yığın fotoğrafını bırakın</b><span>ya da seçmek için tıklayın · tek dosya</span></p>
+        </div>
+        <img id="yigin-onizleme" alt="Yığın fotoğrafı önizlemesi" hidden>
+      </label>
+
+      <div id="onay-bandi" class="onay-bandi" hidden>
+        <p>Referans seti yetersiz görünüyor. Sayım yine de çalışır, ancak sonuç güvenilirliği düşebilir.</p>
+        <div class="onay-bandi-butonlar">
+          <button type="button" id="onay-devam-btn" class="cta-btn cta-btn-kucuk">Yine de say</button>
+          <button type="button" id="onay-iptal-btn" class="ikincil-btn">Vazgeç</button>
+        </div>
+      </div>
+
+      <button type="button" id="sayim-baslat-btn" class="cta-btn" disabled>
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16" y2="16"/></svg>
+        Sayımı başlat
+      </button>
+    </section>
+
+  </div>
+
+  <!-- ---- Sağ: okuma paneli ---- -->
+  <section class="okuma-govde" aria-live="polite">
+    <div class="okuma-basligi">
+      <span class="istasyon-no istasyon-no-koyu">03</span>
+      <h2>Sayım Okuması</h2>
+      <span class="okuma-rozet" id="okuma-rozet">Bekliyor</span>
+    </div>
+
+    <div class="okuma-ekran">
+
+      <div id="sonuc-bos" class="durum-mesaji">
+        <span class="bos-cerceve" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 3v18"/></svg>
+          <span class="tarama-kose tk-1"></span>
+          <span class="tarama-kose tk-2"></span>
+          <span class="tarama-kose tk-3"></span>
+          <span class="tarama-kose tk-4"></span>
+        </span>
+        <p><b>Okuma bekleniyor</b><span>01 ve 02 istasyonlarını doldurun, ardından sayımı başlatın.</span></p>
+      </div>
+
+      <div id="sonuc-yukleniyor" class="durum-mesaji yukleniyor" hidden>
+        <div class="tarama-alani" aria-hidden="true">
+          <span class="tarama-cizgi"></span>
+          <span class="tarama-kose tk-1"></span>
+          <span class="tarama-kose tk-2"></span>
+          <span class="tarama-kose tk-3"></span>
+          <span class="tarama-kose tk-4"></span>
+        </div>
+        <p class="yukleniyor-metin">
+          <b>Yığın taranıyor</b>
+          <span>Maskeleme ve eşleştirme sürüyor. Donanıma göre bir dakikayı bulabilir.</span>
+        </p>
+        <span class="gecen-sure" id="gecen-sure">00:00</span>
+      </div>
+
+      <div id="sonuc-hata" class="durum-mesaji hata-mesaji" hidden></div>
+
+      <div id="sonuc-cevap" class="sonuc-cevap" hidden>
+        <div class="okuma-kutusu">
+          <div class="okuma-kutusu-ust">
+            <span class="okuma-etiket">Tespit edilen adet</span>
+            <span class="okuma-sure" id="sonuc-sure"></span>
+          </div>
+          <p id="sonuc-adet" class="sonuc-adet"></p>
+          <div id="tally-izgara" class="tally-izgara" aria-hidden="true"></div>
+          <p class="tally-not" id="tally-not" hidden></p>
+        </div>
+
+        <figure class="sonuc-gorsel-cerceve">
+          <img id="sonuc-gorsel" alt="İşaretlenmiş sonuç görseli">
+          <figcaption>İşaretlenmiş kare · her çerçeve bir eşleşme</figcaption>
+        </figure>
+      </div>
+
+    </div>
   </section>
 
-  <section class="panel-kart">
-    <h2 class="bolum-basligi">2 · Yığın Fotoğrafı</h2>
-
-    <label id="yigin-yukleme-alani" for="yigin-input" class="yukleme-alani">
-      <input type="file" id="yigin-input" name="yigin_gorsel" accept="image/*" hidden>
-      <div id="yigin-yukleme-bos" class="yukleme-bos">
-        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <p>Sayılacak nesnelerin bulunduğu tek bir yığın fotoğrafı</p>
-      </div>
-      <img id="yigin-onizleme" alt="Yığın fotoğrafı önizlemesi" hidden>
-    </label>
-
-    <div id="onay-bandi" class="onay-bandi" hidden>
-      <p>Referans fotoğraflar yeterli görünmüyor, yine de devam etmek istiyor musunuz?</p>
-      <div class="onay-bandi-butonlar">
-        <button type="button" id="onay-devam-btn" class="cta-btn cta-btn-kucuk">Devam Et</button>
-        <button type="button" id="onay-iptal-btn" class="ikincil-btn">İptal</button>
-      </div>
-    </div>
-
-    <button type="button" id="sayim-baslat-btn" class="cta-btn" disabled>
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      SAYIMI BAŞLAT
-    </button>
-  </section>
-
-  <section class="panel-kart sonuc-kart" aria-live="polite">
-    <h2 class="bolum-basligi">3 · Sonuç</h2>
-
-    <div id="sonuc-bos" class="durum-mesaji">
-      Sonuç burada görünecek — referans ve yığın fotoğraflarını yükleyip sayımı başlatın.
-    </div>
-
-    <div id="sonuc-yukleniyor" class="durum-mesaji yukleniyor" hidden>
-      <span class="spinner" aria-hidden="true"></span>
-      Sayım sürüyor, bu işlem biraz zaman alabilir...
-    </div>
-
-    <div id="sonuc-hata" class="durum-mesaji hata-mesaji" hidden></div>
-
-    <div id="sonuc-cevap" class="sonuc-cevap" hidden>
-      <p id="sonuc-adet" class="sonuc-adet"></p>
-      <img id="sonuc-gorsel" alt="İşaretlenmiş sonuç görseli">
-    </div>
-  </section>
 </main>
 
-<footer class="site-footer">
-  <b>Akıllı Sayım Sistemi</b> · KZ Mekatronik AR-GE · SAM 2 + DINOv2 tabanlı SMC pipeline
+<!-- ============ ALT ŞASE RAYI ============ -->
+<footer class="sase-ray sase-ray-alt">
+  <div class="ray-ic">
+    <span><b>Akıllı Sayım İstasyonu</b> · KZ Mekatronik AR-GE</span>
+    <span class="ray-kod">SMC PIPELINE v3 · SAM 2 + DINOv2</span>
+  </div>
 </footer>
 
 <script src="app.js" defer></script>

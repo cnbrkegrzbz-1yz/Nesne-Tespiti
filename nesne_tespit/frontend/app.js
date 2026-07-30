@@ -1,21 +1,27 @@
-// ---------- Durum pili ----------
+// ---------- Durum pili (andon lambası) ----------
+const durumPill = document.getElementById("durum-pill");
 const durumNokta = document.getElementById("durum-nokta");
 const durumMetin = document.getElementById("durum-metin");
 const durumYenileBtn = document.getElementById("durum-yenile-btn");
 
+const azHareket = window.matchMedia("(prefers-reduced-motion: reduce)");
+
 async function durumKontrolEt() {
   durumNokta.className = "durum-nokta";
-  durumMetin.textContent = "Kontrol ediliyor...";
+  durumPill.classList.remove("ok", "hata");
+  durumMetin.textContent = "Kontrol ediliyor";
   try {
     const res = await fetch("/health");
     const veri = await res.json();
     const hazir = veri.pipeline_ready === true;
     durumNokta.classList.add(hazir ? "ok" : "hata");
-    durumMetin.textContent = hazir ? "Sistem hazır" : "Modeller yükleniyor...";
+    durumPill.classList.add(hazir ? "ok" : "hata");
+    durumMetin.textContent = hazir ? "Sistem hazır" : "Modeller yükleniyor";
     return hazir;
   } catch (e) {
     durumNokta.classList.add("hata");
-    durumMetin.textContent = "Sunucuya ulaşılamadı";
+    durumPill.classList.add("hata");
+    durumMetin.textContent = "Sunucuya ulaşılamıyor";
     return false;
   }
 }
@@ -45,12 +51,15 @@ let vlmDebounceZamanlayici = null;
 
 function referansThumbnaillerCiz() {
   thumbnailGrid.innerHTML = "";
-  thumbnailGrid.hidden = referansDosyalari.length === 0;
-  referansYuklemeBos.hidden = referansDosyalari.length > 0;
+  const doluMu = referansDosyalari.length > 0;
+  thumbnailGrid.hidden = !doluMu;
+  referansYuklemeBos.hidden = doluMu;
+  referansYuklemeAlani.classList.toggle("dolu", doluMu);
 
   referansDosyalari.forEach((dosya, index) => {
     const item = document.createElement("div");
     item.className = "thumbnail-item";
+    item.style.animationDelay = `${Math.min(index * 40, 320)}ms`;
 
     const img = document.createElement("img");
     img.src = URL.createObjectURL(dosya);
@@ -79,16 +88,16 @@ function vlmDurumunuGoster(durum, icerik) {
 
   if (durum === "yukleniyor") {
     vlmDurumu.classList.add("yukleniyor");
-    vlmDurumu.innerHTML = `<span class="spinner" aria-hidden="true"></span> Referans fotoğraflar değerlendiriliyor...`;
+    vlmDurumu.innerHTML = `<span class="spinner" aria-hidden="true"></span> Referans seti değerlendiriliyor`;
   } else if (durum === "yeterli") {
     vlmDurumu.classList.add("yeterli");
-    vlmDurumu.textContent = icerik.aciklama || "Referans fotoğraflar yeterli görünüyor.";
+    vlmDurumu.textContent = icerik.aciklama || "Referans seti sayım için yeterli.";
   } else if (durum === "yetersiz") {
     vlmDurumu.classList.add("yetersiz");
     const liste = (icerik.eksik_yonler || [])
       .map((oneri) => `<li>${oneri}</li>`)
       .join("");
-    vlmDurumu.innerHTML = `${icerik.aciklama || "Referans fotoğraflar yetersiz görünüyor."}<ul>${liste}</ul>`;
+    vlmDurumu.innerHTML = `${icerik.aciklama || "Referans seti yetersiz görünüyor."}<ul>${liste}</ul>`;
   } else if (durum === "hata") {
     vlmDurumu.classList.add("hata");
     vlmDurumu.textContent = icerik;
@@ -124,7 +133,7 @@ async function referansYeterlilikKontrolEt() {
 
     if (!res.ok) {
       sonVlmSonucu = null;
-      vlmDurumunuGoster("hata", veri.error || "Referans kontrolü başarısız oldu.");
+      vlmDurumunuGoster("hata", veri.error || "Referans kontrolü tamamlanamadı.");
       return;
     }
 
@@ -133,7 +142,7 @@ async function referansYeterlilikKontrolEt() {
   } catch (e) {
     if (buIstekNo !== vlmIstekSayaci) return;
     sonVlmSonucu = null;
-    vlmDurumunuGoster("hata", "Sunucuya ulaşılamadı.");
+    vlmDurumunuGoster("hata", "Sunucuya ulaşılamadı. Referans kontrolü yapılamıyor.");
   }
 }
 
@@ -252,13 +261,136 @@ onayIptalBtn.addEventListener("click", () => {
   onayBandi.hidden = true;
 });
 
-// ---------- Sonuç paneli ----------
+// ---------- Okuma paneli ----------
+const okumaRozet = document.getElementById("okuma-rozet");
 const sonucBos = document.getElementById("sonuc-bos");
 const sonucYukleniyor = document.getElementById("sonuc-yukleniyor");
 const sonucHata = document.getElementById("sonuc-hata");
 const sonucCevap = document.getElementById("sonuc-cevap");
 const sonucAdet = document.getElementById("sonuc-adet");
 const sonucGorsel = document.getElementById("sonuc-gorsel");
+const sonucSure = document.getElementById("sonuc-sure");
+const gecenSure = document.getElementById("gecen-sure");
+const tallyIzgara = document.getElementById("tally-izgara");
+const tallyNot = document.getElementById("tally-not");
+
+const TALLY_UST_SINIR = 300;
+
+let sayacBaslangic = 0;
+let sayacZamanlayici = null;
+
+function sureBicimle(saniye) {
+  const dk = String(Math.floor(saniye / 60)).padStart(2, "0");
+  const sn = String(saniye % 60).padStart(2, "0");
+  return `${dk}:${sn}`;
+}
+
+function sayaciBaslat() {
+  sayacBaslangic = Date.now();
+  gecenSure.textContent = "00:00";
+  clearInterval(sayacZamanlayici);
+  sayacZamanlayici = setInterval(() => {
+    const gecen = Math.floor((Date.now() - sayacBaslangic) / 1000);
+    gecenSure.textContent = sureBicimle(gecen);
+  }, 1000);
+}
+
+function sayaciDurdur() {
+  clearInterval(sayacZamanlayici);
+  sayacZamanlayici = null;
+  return Math.floor((Date.now() - sayacBaslangic) / 1000);
+}
+
+// Mekanik sayaç: her hane kendi rulosunda yerine oturur
+function adediYaz(adet) {
+  const haneler = String(adet).split("");
+  sonucAdet.innerHTML = "";
+
+  const kutu = document.createElement("span");
+  kutu.className = "hane-kutu";
+  kutu.style.display = "contents";
+  kutu.setAttribute("aria-hidden", "true");
+
+  const rulolar = [];
+  haneler.forEach((rakam, i) => {
+    const hane = document.createElement("span");
+    hane.className = "hane";
+
+    const rulo = document.createElement("span");
+    rulo.className = "hane-rulo";
+    for (let n = 0; n <= 9; n++) {
+      const s = document.createElement("span");
+      s.textContent = String(n);
+      rulo.appendChild(s);
+    }
+    rulo.style.transitionDelay = `${i * 90}ms`;
+    hane.appendChild(rulo);
+    kutu.appendChild(hane);
+    rulolar.push({ rulo, rakam: Number(rakam) });
+  });
+
+  sonucAdet.appendChild(kutu);
+
+  const birim = document.createElement("span");
+  birim.className = "sonuc-birim";
+  birim.setAttribute("aria-hidden", "true");
+  birim.textContent = "adet";
+  sonucAdet.appendChild(birim);
+
+  // Ekran okuyucular için düz metin karşılığı
+  sonucAdet.setAttribute("role", "text");
+  sonucAdet.setAttribute("aria-label", `${adet} adet tespit edilmiştir.`);
+
+  // Ruloları 0'dan hedef rakama çevir
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      rulolar.forEach(({ rulo, rakam }) => {
+        rulo.style.transform = `translateY(-${rakam}em)`;
+      });
+    });
+  });
+}
+
+// Çetele ızgarası: sayılan her parça için bir işaret
+function cetelaCiz(adet) {
+  tallyIzgara.innerHTML = "";
+  const gosterilecek = Math.min(adet, TALLY_UST_SINIR);
+  const parca = document.createDocumentFragment();
+
+  for (let i = 0; i < gosterilecek; i++) {
+    const birim = document.createElement("span");
+    birim.className = "tally-birim";
+    birim.style.animationDelay = azHareket.matches
+      ? "0ms"
+      : `${Math.min(260 + i * 7, 1400)}ms`;
+    parca.appendChild(birim);
+  }
+  tallyIzgara.appendChild(parca);
+
+  if (adet > TALLY_UST_SINIR) {
+    tallyNot.hidden = false;
+    tallyNot.textContent = `İlk ${TALLY_UST_SINIR} işaret gösteriliyor · toplam ${adet}`;
+  } else {
+    tallyNot.hidden = true;
+    tallyNot.textContent = "";
+  }
+}
+
+function rozetiAyarla(durum) {
+  okumaRozet.className = "okuma-rozet";
+  if (durum === "bos") {
+    okumaRozet.textContent = "Bekliyor";
+  } else if (durum === "yukleniyor") {
+    okumaRozet.classList.add("calisiyor");
+    okumaRozet.textContent = "Çalışıyor";
+  } else if (durum === "cevap") {
+    okumaRozet.classList.add("tamam");
+    okumaRozet.textContent = "Tamamlandı";
+  } else if (durum === "hata") {
+    okumaRozet.classList.add("hatali");
+    okumaRozet.textContent = "Hata";
+  }
+}
 
 function sonucDurumunuAyarla(durum, icerik) {
   sonucBos.hidden = durum !== "bos";
@@ -266,9 +398,19 @@ function sonucDurumunuAyarla(durum, icerik) {
   sonucHata.hidden = durum !== "hata";
   sonucCevap.hidden = durum !== "cevap";
 
-  if (durum === "hata") sonucHata.textContent = icerik;
+  rozetiAyarla(durum);
+
+  if (durum === "yukleniyor") sayaciBaslat();
+
+  if (durum === "hata") {
+    sonucHata.textContent = icerik;
+  }
+
   if (durum === "cevap") {
-    sonucAdet.textContent = `${icerik.adet} adet tespit edilmiştir.`;
+    const gecen = sayaciDurdur();
+    sonucSure.textContent = `Süre ${sureBicimle(gecen)}`;
+    adediYaz(icerik.adet);
+    cetelaCiz(icerik.adet);
     sonucGorsel.src = `data:image/png;base64,${icerik.sonuc_gorsel_base64}`;
   }
 }
@@ -287,12 +429,14 @@ async function sayimiCalistir() {
     const veri = await res.json();
 
     if (!res.ok) {
-      sonucDurumunuAyarla("hata", veri.error || "Beklenmeyen bir hata oluştu.");
+      sayaciDurdur();
+      sonucDurumunuAyarla("hata", veri.error || "Sayım tamamlanamadı. Fotoğrafları kontrol edip tekrar deneyin.");
       return;
     }
 
     sonucDurumunuAyarla("cevap", veri);
   } catch (e) {
+    sayaciDurdur();
     sonucDurumunuAyarla("hata", "Sunucuya ulaşılamadı. Backend'in çalıştığından emin olun.");
   } finally {
     sayimBaslatButonuGuncelle();
